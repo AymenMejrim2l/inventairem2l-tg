@@ -542,6 +542,18 @@ function exportResults() {
         return;
     }
 
+    // Retrieve current configuration values directly from DOM elements
+    const currentDepot = depotSelect.value;
+    const currentZone = zoneInput.value;
+    const currentDate = dateInput.value;
+    const currentInventoriedBy = inventoriedBySelect.value;
+
+    // Validate if configuration fields are filled before export
+    if (!currentDepot || !currentZone || !currentInventoriedBy || !currentDate) {
+        showNotification('Veuillez vous assurer que tous les champs de configuration sont remplis avant d\'exporter.', 'error');
+        return;
+    }
+
     // Group products by barcode for export
     const groupedProducts = {};
     scannedProducts.forEach(product => {
@@ -561,20 +573,20 @@ function exportResults() {
         p.label,
         p.quantity,
         p.timestamp,
-        config.depot,
-        config.zone,
-        config.date,
-        config.inventoriedBy // Ajout de la personne qui inventorie
+        currentDepot, // Use current DOM value
+        currentZone,  // Use current DOM value
+        currentDate,  // Use current DOM value
+        currentInventoriedBy // Use current DOM value
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([
-        ['CodeBarres', 'CodeArticle', 'Libelle', 'Quantité', 'Date/Heure Dernier Scan', 'Dépôt', 'Zone', 'Date Inventaire', 'Inventorié par'], // Ajout de l'en-tête
+        ['CodeBarres', 'CodeArticle', 'Libelle', 'Quantité', 'Date/Heure Dernier Scan', 'Dépôt', 'Zone', 'Date Inventaire', 'Inventorié par'],
         ...data
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inventaire');
 
-    const fileName = `Inventaire_${config.depot}_${config.zone}_${config.date}_${config.inventoriedBy}.xlsx`; // Ajout de la personne qui inventorie au nom du fichier
+    const fileName = `Inventaire_${currentDepot}_${currentZone}_${currentDate}_${currentInventoriedBy}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
     showNotification('Exportation Excel réussie !', 'success');
