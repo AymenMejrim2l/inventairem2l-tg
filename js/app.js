@@ -35,7 +35,7 @@ const scannerStatusDiv = document.getElementById('scannerStatus');
 const manualScanInput = document.getElementById('manualScan');
 const scanBtn = document.getElementById('scanBtn');
 const scanResultDiv = document.getElementById('scanResult');
-const manualAddDiv = document='manualAdd';
+const manualAddDiv = document.getElementById('manualAdd'); // Correction ici
 const manualBarcodeInput = document.getElementById('manualBarcode');
 const manualCodeInput = document.getElementById('manualCode');
 const manualLabelInput = document.getElementById('manualLabel');
@@ -66,9 +66,13 @@ function initializeApp() {
         config = savedConfig;
         depotSelect.value = config.depot;
         zoneInput.value = config.zone;
-        dateInput.value = config.date;
+        dateInput.value = config.date; // Charge la date sauvegardée
         isConfigured = true;
         updateExportFileName();
+    } else {
+        // Si aucune configuration n'est sauvegardée, initialise la date à aujourd'hui
+        const today = new Date().toISOString().split('T')[0];
+        dateInput.value = today;
     }
 
     if (savedScannedProducts) {
@@ -77,9 +81,7 @@ function initializeApp() {
         updateScanCount();
     }
 
-    // Set current date
-    const today = new Date().toISOString().split('T')[0];
-    dateInput.value = today;
+    // Set current date for display (this is separate from the input field)
     currentDateDiv.textContent = new Date().toLocaleDateString('fr-FR');
 
     // Initial tab display
