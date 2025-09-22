@@ -35,7 +35,7 @@ const scannerStatusDiv = document.getElementById('scannerStatus');
 const manualScanInput = document.getElementById('manualScan');
 const scanBtn = document.getElementById('scanBtn');
 const scanResultDiv = document.getElementById('scanResult');
-const manualAddDiv = document.getElementById('manualAdd');
+const manualAddDiv = document='manualAdd';
 const manualBarcodeInput = document.getElementById('manualBarcode');
 const manualCodeInput = document.getElementById('manualCode');
 const manualLabelInput = document.getElementById('manualLabel');
@@ -590,7 +590,7 @@ function updateExportFileName() {
 }
 
 // --- Scan Feedback (Visual & Sound) ---
-const successSound = new Audio('https://www.soundjay.com/buttons/button-2.mp3'); // Example sound
+const successSound = new Audio('https://www.soundjay.com/misc/ding-dong-01.mp3'); // Nouveau son de succès
 const errorSound = new Audio('https://www.soundjay.com/misc/fail-buzzer-01.mp3'); // Example sound
 
 function triggerScanFeedback(type) {
