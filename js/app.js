@@ -175,13 +175,29 @@ function handleExcelImport(event) {
         try {
             const data = new Uint8Array(e.target.result);
             const workbook = XLSX.read(data, { type: 'array' });
+
+            if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
+                importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
+                importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: Fichier Excel vide ou format incorrect.';
+                productDatabase = [];
+                return;
+            }
+
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
+
+            if (!worksheet) {
+                importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
+                importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: La première feuille du fichier Excel est vide.';
+                productDatabase = [];
+                return;
+            }
+
             const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
             // Assuming first row is header: CodeBarres, CodeArticle, Libelle
             // And data starts from the second row
-            if (json.length < 2 || json[0][0] !== 'CodeBarres' || json[0][1] !== 'CodeArticle' || json[0][2] !== 'Libelle') {
+            if (!json || json.length < 2 || json[0][0] !== 'CodeBarres' || json[0][1] !== 'CodeArticle' || json[0][2] !== 'Libelle') {
                 importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
                 importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: Format de fichier Excel incorrect. Attendu: CodeBarres | CodeArticle | Libelle.';
                 productDatabase = [];
