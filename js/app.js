@@ -10,6 +10,7 @@ let lastScanTime = 0;
 let config = {
     depot: '',
     zone: '',
+    inventoriedBy: '', // Nouveau champ pour la personne qui inventorie
     date: ''
 };
 
@@ -24,6 +25,7 @@ const resultsModule = document.getElementById('resultsModule');
 
 const depotSelect = document.getElementById('depotSelect');
 const zoneInput = document.getElementById('zoneInput');
+const inventoriedBySelect = document.getElementById('inventoriedBySelect'); // Nouveau DOM element
 const dateInput = document.getElementById('dateInput');
 const importExcelBtn = document.getElementById('importExcelBtn');
 const excelFile = document.getElementById('excelFile');
@@ -35,7 +37,7 @@ const scannerStatusDiv = document.getElementById('scannerStatus');
 const manualScanInput = document.getElementById('manualScan');
 const scanBtn = document.getElementById('scanBtn');
 const scanResultDiv = document.getElementById('scanResult');
-const manualAddDiv = document.getElementById('manualAdd'); // Correction ici
+const manualAddDiv = document.getElementById('manualAdd');
 const manualBarcodeInput = document.getElementById('manualBarcode');
 const manualCodeInput = document.getElementById('manualCode');
 const manualLabelInput = document.getElementById('manualLabel');
@@ -66,7 +68,8 @@ function initializeApp() {
         config = savedConfig;
         depotSelect.value = config.depot;
         zoneInput.value = config.zone;
-        dateInput.value = config.date; // Charge la date sauvegardée
+        inventoriedBySelect.value = config.inventoriedBy; // Charge la personne qui inventorie
+        dateInput.value = config.date;
         isConfigured = true;
         updateExportFileName();
     } else {
@@ -100,6 +103,7 @@ function setupEventListeners() {
     excelFile.addEventListener('change', handleExcelImport);
     depotSelect.addEventListener('change', updateExportFileName);
     zoneInput.addEventListener('input', updateExportFileName);
+    inventoriedBySelect.addEventListener('change', updateExportFileName); // Écouteur pour le nouveau champ
 
     // Scanning
     scanBtn.addEventListener('click', performScan);
@@ -143,9 +147,10 @@ function switchTab(tab) {
 function validateConfiguration() {
     const depot = depotSelect.value;
     const zone = zoneInput.value;
+    const inventoriedBy = inventoriedBySelect.value; // Récupère la valeur du nouveau champ
     const date = dateInput.value;
 
-    if (!depot || !zone || !date) {
+    if (!depot || !zone || !inventoriedBy || !date) { // Ajoute inventoriedBy à la validation
         showNotification('Veuillez remplir tous les champs requis pour la configuration.', 'error');
         return;
     }
@@ -155,7 +160,7 @@ function validateConfiguration() {
         return;
     }
 
-    config = { depot, zone, date };
+    config = { depot, zone, inventoriedBy, date }; // Inclut inventoriedBy dans la configuration
     isConfigured = true;
     saveState('inventoryConfig', config); // Save config
     showNotification('Configuration validée avec succès !', 'success');
@@ -558,17 +563,18 @@ function exportResults() {
         p.timestamp,
         config.depot,
         config.zone,
-        config.date
+        config.date,
+        config.inventoriedBy // Ajout de la personne qui inventorie
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([
-        ['CodeBarres', 'CodeArticle', 'Libelle', 'Quantité', 'Date/Heure Dernier Scan', 'Dépôt', 'Zone', 'Date Inventaire'],
+        ['CodeBarres', 'CodeArticle', 'Libelle', 'Quantité', 'Date/Heure Dernier Scan', 'Dépôt', 'Zone', 'Date Inventaire', 'Inventorié par'], // Ajout de l'en-tête
         ...data
     ]);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Inventaire');
 
-    const fileName = `Inventaire_${config.depot}_${config.zone}_${config.date}.xlsx`;
+    const fileName = `Inventaire_${config.depot}_${config.zone}_${config.date}_${config.inventoriedBy}.xlsx`; // Ajout de la personne qui inventorie au nom du fichier
     XLSX.writeFile(wb, fileName);
 
     showNotification('Exportation Excel réussie !', 'success');
@@ -588,7 +594,8 @@ function updateExportFileName() {
     const depot = depotSelect.value || 'depot';
     const zone = zoneInput.value || 'zone';
     const date = dateInput.value || 'date';
-    exportFileNameSpan.textContent = `${depot}_${zone}_${date}`;
+    const inventoriedBy = inventoriedBySelect.value || 'inventorieur'; // Récupère la valeur du nouveau champ
+    exportFileNameSpan.textContent = `${depot}_${zone}_${date}_${inventoriedBy}`; // Inclut la personne qui inventorie
 }
 
 // --- Scan Feedback (Visual & Sound) ---
