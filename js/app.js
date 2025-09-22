@@ -164,6 +164,7 @@ function handleExcelImport(event) {
     const file = event.target.files[0];
     importStatusDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
     importStatusDiv.innerHTML = '';
+    productDatabase = []; // Clear previous database on new import attempt
 
     if (!file) {
         importStatusDiv.classList.add('hidden');
@@ -177,9 +178,7 @@ function handleExcelImport(event) {
             const workbook = XLSX.read(data, { type: 'array' });
 
             if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
-                importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
-                importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: Fichier Excel vide ou format incorrect.';
-                productDatabase = [];
+                displayImportError('Fichier Excel vide ou format incorrect.');
                 return;
             }
 
@@ -187,41 +186,68 @@ function handleExcelImport(event) {
             const worksheet = workbook.Sheets[firstSheetName];
 
             if (!worksheet) {
-                importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
-                importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: La première feuille du fichier Excel est vide.';
-                productDatabase = [];
+                displayImportError('La première feuille du fichier Excel est vide.');
                 return;
             }
 
             const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
-            // Assuming first row is header: CodeBarres, CodeArticle, Libelle
-            // And data starts from the second row
-            if (!json || json.length < 2 || json[0][0] !== 'CodeBarres' || json[0][1] !== 'CodeArticle' || json[0][2] !== 'Libelle') {
-                importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
-                importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: Format de fichier Excel incorrect. Attendu: CodeBarres | CodeArticle | Libelle.';
-                productDatabase = [];
+            if (!json || json.length === 0) {
+                displayImportError('Le fichier Excel ne contient pas de données.');
                 return;
             }
 
-            productDatabase = json.slice(1).map(row => ({
-                barcode: String(row[0]),
-                code: String(row[1]),
-                label: String(row[2])
-            }));
+            // Ensure the first row (header) exists and is an array
+            if (!Array.isArray(json[0])) {
+                displayImportError('La première ligne du fichier Excel n\'est pas un format de tableau valide.');
+                return;
+            }
 
-            importStatusDiv.classList.add('bg-green-100', 'text-green-800', 'p-2', 'rounded');
-            importStatusDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${productDatabase.length} articles importés avec succès.`;
-            showNotification(`${productDatabase.length} articles importés avec succès.`, 'success');
+            const headerRow = json[0];
+            if (headerRow[0] !== 'CodeBarres' || headerRow[1] !== 'CodeArticle' || headerRow[2] !== 'Libelle') {
+                displayImportError('Format de fichier Excel incorrect. Attendu: CodeBarres | CodeArticle | Libelle.');
+                return;
+            }
+
+            // Process data rows
+            const importedData = json.slice(1).map(row => {
+                if (!Array.isArray(row) || row.length < 3) {
+                    console.warn("Skipping malformed row in Excel import:", row);
+                    return null;
+                }
+                return {
+                    barcode: String(row[0]),
+                    code: String(row[1]),
+                    label: String(row[2])
+                };
+            }).filter(Boolean); // Remove null entries
+
+            if (importedData.length === 0) {
+                displayImportError('Aucune donnée d\'article valide trouvée après l\'importation.');
+                return;
+            }
+
+            productDatabase = importedData;
+            displayImportSuccess(`${productDatabase.length} articles importés avec succès.`);
 
         } catch (error) {
-            importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
-            importStatusDiv.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Erreur lors de l\'importation du fichier: ${error.message}`;
-            productDatabase = [];
-            showNotification('Erreur lors de l\'importation du fichier Excel.', 'error');
+            displayImportError(`Erreur lors de l\'importation du fichier: ${error.message}`);
         }
     };
     reader.readAsArrayBuffer(file);
+}
+
+function displayImportError(message) {
+    importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
+    importStatusDiv.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Erreur: ${message}`;
+    showNotification(`Erreur lors de l\'importation: ${message}`, 'error');
+    productDatabase = []; // Ensure database is cleared on error
+}
+
+function displayImportSuccess(message) {
+    importStatusDiv.classList.add('bg-green-100', 'text-green-800', 'p-2', 'rounded');
+    importStatusDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
+    showNotification(message, 'success');
 }
 
 function showNotification(message, type) {
