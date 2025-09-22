@@ -278,7 +278,7 @@ function performScan() {
     }
 
     const now = Date.now();
-    if (now - lastScanTime < 1300) { // Debounce scans within 1.3 seconds
+    if (now - lastScanTime < 300) { // Debounce scans reduced to 300ms
         showNotification('Veuillez attendre avant de scanner à nouveau.', 'warning');
         return;
     }
