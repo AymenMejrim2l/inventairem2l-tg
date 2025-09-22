@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M2L&TG Inventory - SUNMI L2s</title>
+    <link rel="manifest" href="/home/ubuntu/manifest.json">
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css">
+    <style>
+        .mobile-container {
+            max-width: 420px;
+            margin: 0 auto;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        .scan-success {
+            background: linear-gradient(45deg, #4CAF50, #8BC34A);
+            box-shadow: 0 0 20px rgba(76, 175, 80, 0.3);
+        }
+        .scan-error {
+            background: linear-gradient(45deg, #f44336, #ff5722);
+            box-shadow: 0 0 20px rgba(244, 67, 54, 0.3);
+        }
+        .btn-primary {
+            background: linear-gradient(45deg, #2196F3, #21CBF3);
+            transition: all 0.3s ease;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(33, 150, 243, 0.3);
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+        }
+        .depot-item:hover {
+            background: rgba(33, 150, 243, 0.1);
+        }
+    </style>
+</head>
+<body class="bg-gray-100">
+    <div class="mobile-container">
+        <!-- Header -->
+        <div class="bg-white shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center">
+                    <i class="fas fa-warehouse text-blue-600 text-2xl mr-3"></i>
+                    <div>
+                        <h1 class="text-lg font-bold text-gray-800">M2L&TG Inventory</h1>
+                        <p class="text-sm text-gray-600">SUNMI L2s Terminal</p>
+                    </div>
+                </div>
+                <div class="text-right">
+                    <div class="text-sm text-gray-600" id="currentDate"></div>
+                    <div class="text-xs text-green-600">● Connecté</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div class="bg-white border-b">
+            <div class="flex">
+                <button class="flex-1 py-3 px-4 text-center bg-blue-600 text-white font-medium" id="configTab">
+                    <i class="fas fa-cog mr-2"></i>Configuration
+                </button>
+                <button class="flex-1 py-3 px-4 text-center text-gray-600 font-medium" id="scanTab">
+                    <i class="fas fa-barcode mr-2"></i>Inventaire
+                </button>
+                <button class="flex-1 py-3 px-4 text-center text-gray-600 font-medium" id="resultsTab">
+                    <i class="fas fa-list mr-2"></i>Résultats
+                </button>
+            </div>
+        </div>
+
+        <!-- Configuration Module -->
+        <div id="configModule" class="p-4 space-y-4">
+            <div class="card p-4 shadow-lg">
+                <h2 class="text-lg font-bold text-gray-800 mb-4">
+                    <i class="fas fa-cog text-blue-600 mr-2"></i>Configuration Inventaire
+                </h2>
+                
+                <!-- Sélection Dépôt -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Sélection Dépôt</label>
+                    <select id="depotSelect" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <option value="">-- Choisir un dépôt --</option>
+                        <option value="depot_m2l">Dépôt M2L</option>
+                        <option value="depot_tg">Dépôt TG</option>
+                        <option value="b_nabeul">B Nabeul</option>
+                        <option value="b_dar_chaaban">B Dar Chaaban</option>
+                        <option value="b_korba">B Korba</option>
+                        <option value="b_boulaaba">B Boulaaba</option>
+                        <option value="b_marche">B Marché</option>
+                        <option value="b_menzil_tmim">B Menzil Tmim</option>
+                        <option value="b_kelibia">B Kelibia</option>
+                        <option value="b_gromblia">B Gromblia</option>
+                    </select>
+                </div>
+
+                <!-- Zone -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Zone d\"Inventaire</label>
+                    <input type="text" id="zoneInput" placeholder="Ex: Zone A, Rayon 1, etc." 
+                           class="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                </div>
+
+                <!-- Date -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Date d\"Inventaire</label>
+                    <input type="date" id="dateInput" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50" readonly>
+                </div>
+
+                <!-- Import Excel -->
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Import Base Articles (.xlsx)</label>
+                    <div class="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
+                        <input type="file" id="excelFile" accept=".xlsx" class="hidden">
+                        <button id="importExcelBtn" 
+                                class="btn-primary text-white px-4 py-2 rounded-lg font-medium">
+                            <i class="fas fa-upload mr-2"></i>Importer Fichier Excel
+                        </button>
+                        <p class="text-xs text-gray-500 mt-2">Format: CodeBarres | CodeArticle | Libelle</p>
+                    </div>
+                    <div id="importStatus" class="mt-2 hidden"></div>
+                </div>
+
+                <!-- Validation Configuration -->
+                <button id="validateConfig" class="w-full bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors">
+                    <i class="fas fa-check mr-2"></i>Valider Configuration
+                </button>
+            </div>
+        </div>
+
+        <!-- Scan Module -->
+        <div id="scanModule" class="p-4 space-y-4 hidden">
+            <div class="card p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-barcode text-green-600 mr-2"></i>Scanner Produits
+                    </h2>
+                    <div class="text-sm text-gray-600">
+                        <span id="scanCount">0</span> produits scannés
+                    </div>
+                </div>
+
+                <!-- Scanner Status -->
+                <div id="scannerStatus" class="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                    <div class="flex items-center">
+                        <i class="fas fa-qrcode text-blue-600 mr-2"></i>
+                        <span class="text-blue-800">Scanner SUNMI L2s prêt</span>
+                    </div>
+                </div>
+
+                <!-- Simulation Scanner -->
+                <div class="bg-gray-50 rounded-lg p-4 mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Simulation Scanner (Test)</label>
+                    <div class="flex space-x-2">
+                        <input type="text" id="manualScan" placeholder="Code-barres ou scan automatique..." 
+                               class="flex-1 p-3 border border-gray-300 rounded-lg">
+                        <button id="scanBtn" class="bg-green-600 text-white px-4 py-3 rounded-lg hover:bg-green-700">
+                            <i class="fas fa-barcode"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Scan Result -->
+                <div id="scanResult" class="hidden mb-4"></div>
+
+                <!-- Manual Add -->
+                <div id="manualAdd" class="hidden bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
+                    <h3 class="font-medium text-yellow-800 mb-3">Ajouter Produit Manuellement</h3>
+                    <div class="space-y-2">
+                        <input type="text" id="manualBarcode" placeholder="Code-barres" class="w-full p-2 border rounded">
+                        <input type="text" id="manualCode" placeholder="Code Article" class="w-full p-2 border rounded">
+                        <input type="text" id="manualLabel" placeholder="Libellé" class="w-full p-2 border rounded">
+                        <div class="flex space-x-2">
+                            <button id="addManualProduct" class="bg-green-600 text-white px-4 py-2 rounded">Ajouter</button>
+                            <button id="cancelManual" class="bg-gray-600 text-white px-4 py-2 rounded">Annuler</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent Scans -->
+                <div class="bg-white border rounded-lg">
+                    <div class="p-3 border-b bg-gray-50">
+                        <h3 class="font-medium text-gray-800">Derniers Scans</h3>
+                    </div>
+                    <div id="recentScans" class="max-h-64 overflow-y-auto">
+                        <div class="p-4 text-center text-gray-500">
+                            <i class="fas fa-barcode text-4xl mb-2"></i>
+                            <p>Aucun produit scanné</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Module -->
+        <div id="resultsModule" class="p-4 space-y-4 hidden">
+            <div class="card p-4 shadow-lg">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-bold text-gray-800">
+                        <i class="fas fa-list text-purple-600 mr-2"></i>Résultats Inventaire
+                    </h2>
+                    <div class="text-sm text-gray-600">
+                        <span id="totalItems">0</span> articles
+                    </div>
+                </div>
+
+                <!-- Export Controls -->
+                <div class="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-medium text-blue-800">Export Excel</h3>
+                            <p class="text-sm text-blue-600">Inventaire_<span id="exportFileName">...</span>.xlsx</p>
+                        </div>
+                        <button id="exportBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
+                            <i class="fas fa-download mr-2"></i>Exporter
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <div class="bg-white border rounded-lg overflow-hidden">
+                    <div class="p-3 border-b bg-gray-50">
+                        <h3 class="font-medium text-gray-800">Liste des Articles</h3>
+                    </div>
+                    <div id="resultsTable" class="max-h-96 overflow-y-auto">
+                        <div class="p-4 text-center text-gray-500">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>Aucun résultat à afficher</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clear Results -->
+                <button id="clearResults" class="w-full bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors hidden">
+                    <i class="fas fa-trash mr-2"></i>Vider les Résultats
+                </button>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="bg-white border-t p-4 text-center">
+            <p class="text-xs text-gray-500">© 2024 M2L&TG Inventory - SUNMI L2s Compatible</p>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Register service worker
+        if ("serviceWorker" in navigator) {
+            window.addEventListener("load", function() {
+                navigator.serviceWorker.register("/home/ubuntu/service-worker.js").then(function(registration) {
+                    console.log("ServiceWorker registration successful with scope: ", registration.scope);
+                }, function(err) {
+                    console.log("ServiceWorker registration failed: ", err);
+                });
+            });
+        }
+
+        // Application State
+        let currentTab = 'config';
+        let isConfigured = false;
+        let scannedProducts = []; // Now stores unique products with quantities
+        let productDatabase = [];
+        let lastScanTime = 0;
+        let config = {
+            depot: '',
+            zone: '',
+            date: ''
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        function initializeApp() {
+            // Set current date
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('dateInput').value = today;
+            document.getElementById('currentDate').textContent = new Date().toLocaleDateString('fr-FR');
+        }
+
+        function setupEventListeners() {
+            // Tab navigation
+            document.getElementById('configTab').addEventListener('click', () => switchTab('config'));
+            document.getElementById('scanTab').addEventListener('click', () => switchTab('scan'));
+            document.getElementById('resultsTab').addEventListener('click', () => switchTab('results'));
+
+            // Configuration
+            document.getElementById('validateConfig').addEventListener('click', validateConfiguration);
+            document.getElementById('importExcelBtn').addEventListener('click', () => document.getElementById('excelFile').click());
+            document.getElementById('excelFile').addEventListener('change', handleExcelImport);
+
+            // Scanning
+            document.getElementById('scanBtn').addEventListener('click', performScan);
+            document.getElementById('manualScan').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') performScan();
+            });
+
+            // Manual add
+            document.getElementById('addManualProduct').addEventListener('click', addManualProduct);
+            document.getElementById('cancelManual').addEventListener('click', cancelManualAdd);
+
+            // Results
+            document.getElementById('exportBtn').addEventListener('click', exportResults);
+            document.getElementById('clearResults').addEventListener('click', clearResults);
+        }
+
+        function switchTab(tab) {
+            // Update tab buttons
+            document.querySelectorAll('[id$="Tab"]').forEach(btn => {
+                btn.classList.remove('bg-blue-600', 'text-white');
+                btn.classList.add('text-gray-600');
+            });
+            document.getElementById(tab + 'Tab').classList.add('bg-blue-600', 'text-white');
+            document.getElementById(tab + 'Tab').classList.remove('text-gray-600');
+
+            // Show/hide modules
+            document.getElementById('configModule').classList.add('hidden');
+            document.getElementById('scanModule').classList.add('hidden');
+            document.getElementById('resultsModule').classList.add('hidden');
+            document.getElementById(tab + 'Module').classList.remove('hidden');
+
+            currentTab = tab;
+
+            // Prevent access to scan/results without configuration
+            if ((tab === 'scan' || tab === 'results') && !isConfigured) {
+                showNotification('Veuillez d\'abord configurer l\'inventaire', 'warning');
+                switchTab('config');
+            }
+        }
+
+        function validateConfiguration() {
+            const depot = document.getElementById('depotSelect').value;
+            const zone = document.getElementById('zoneInput').value;
+            const date = document.getElementById('dateInput').value;
+
+            if (!depot || !zone || !date) {
+                showNotification('Veuillez remplir tous les champs requis pour la configuration.', 'error');
+                return;
+            }
+
+            if (productDatabase.length === 0) {
+                showNotification('Veuillez importer la base d\'articles avant de valider la configuration.', 'error');
+                return;
+            }
+
+            config = { depot, zone, date };
+            isConfigured = true;
+            showNotification('Configuration validée avec succès !', 'success');
+            switchTab('scan'); // Move to scan tab after successful configuration
+        }
+
+        function handleExcelImport(event) {
+            const file = event.target.files[0];
+            const importStatusDiv = document.getElementById('importStatus');
+            importStatusDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
+            importStatusDiv.innerHTML = '';
+
+            if (!file) {
+                importStatusDiv.classList.add('hidden');
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+                    // Assuming first row is header: CodeBarres, CodeArticle, Libelle
+                    // And data starts from the second row
+                    if (json.length < 2 || json[0][0] !== 'CodeBarres' || json[0][1] !== 'CodeArticle' || json[0][2] !== 'Libelle') {
+                        importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
+                        importStatusDiv.innerHTML = '<i class="fas fa-times-circle mr-2"></i>Erreur: Format de fichier Excel incorrect. Attendu: CodeBarres | CodeArticle | Libelle.';
+                        productDatabase = [];
+                        return;
+                    }
+
+                    productDatabase = json.slice(1).map(row => ({
+                        barcode: String(row[0]),
+                        code: String(row[1]),
+                        label: String(row[2])
+                    }));
+
+                    importStatusDiv.classList.add('bg-green-100', 'text-green-800', 'p-2', 'rounded');
+                    importStatusDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${productDatabase.length} articles importés avec succès.`;
+                    showNotification(`${productDatabase.length} articles importés avec succès.`, 'success');
+
+                } catch (error) {
+                    importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
+                    importStatusDiv.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Erreur lors de l\'importation du fichier: ${error.message}`;
+                    productDatabase = [];
+                    showNotification('Erreur lors de l\'importation du fichier Excel.', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function showNotification(message, type) {
+            const notificationDiv = document.createElement('div');
+            notificationDiv.textContent = message;
+            notificationDiv.classList.add('notification', 'fixed', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'px-4', 'py-2', 'rounded-lg', 'shadow-lg', 'text-white', 'z-50');
+
+            if (type === 'success') {
+                notificationDiv.classList.add('bg-green-500');
+            } else if (type === 'error') {
+                notificationDiv.classList.add('bg-red-500');
+            } else if (type === 'warning') {
+                notificationDiv.classList.add('bg-yellow-500');
+            }
+
+            document.body.appendChild(notificationDiv);
+
+            setTimeout(() => {
+                notificationDiv.remove();
+            }, 3000);
+        }
+
+        function performScan() {
+            const barcode = document.getElementById('manualScan').value.trim();
+            if (!barcode) {
+                showNotification('Veuillez entrer un code-barres ou scanner un produit.', 'warning');
+                return;
+            }
+
+            const now = Date.now();
+            if (now - lastScanTime < 1300) { // Debounce scans within 1.3 seconds
+                showNotification('Veuillez attendre avant de scanner à nouveau.', 'warning');
+                return;
+            }
+            lastScanTime = now;
+
+            // Find product in database
+            const productInfo = productDatabase.find(p => p.barcode === barcode);
+
+            if (productInfo) {
+                // Check if product already exists in scannedProducts
+                const existingProduct = scannedProducts.find(p => p.barcode === barcode);
+
+                if (existingProduct) {
+                    // If exists, increment quantity and update timestamp
+                    existingProduct.quantity++;
+                    existingProduct.timestamp = new Date().toLocaleString('fr-FR');
+                } else {
+                    // If not exists, add new product with quantity 1
+                    const newProduct = {
+                        id: Date.now(), // Unique ID for each scanned item
+                        barcode: productInfo.barcode,
+                        code: productInfo.code,
+                        label: productInfo.label,
+                        quantity: 1, // Initialize quantity to 1
+                        timestamp: new Date().toLocaleString('fr-FR')
+                    };
+                    scannedProducts.unshift(newProduct); // Add to the beginning
+                }
+                updateRecentScans();
+                updateScanCount();
+                showNotification(`Produit scanné: ${productInfo.label}`, 'success');
+                document.getElementById('manualScan').value = ''; // Clear input after successful scan
+            } else {
+                showNotification(`Produit non trouvé: ${barcode}. Veuillez l\'ajouter manuellement.`, 'error');
+                document.getElementById('manualBarcode').value = barcode;
+                document.getElementById('manualCode').value = '';
+                document.getElementById('manualLabel').value = '';
+                document.getElementById('manualAdd').classList.remove('hidden');
+            }
+        }
+
+        function addManualProduct() {
+            const barcode = document.getElementById('manualBarcode').value.trim();
+            const code = document.getElementById('manualCode').value.trim();
+            const label = document.getElementById('manualLabel').value.trim();
+
+            if (!barcode || !code || !label) {
+                showNotification('Veuillez remplir tous les champs pour l\'ajout manuel.', 'error');
+                return;
+            }
+
+            // Check if product already exists in scannedProducts
+            const existingProduct = scannedProducts.find(p => p.barcode === barcode);
+
+            if (existingProduct) {
+                existingProduct.quantity++;
+                existingProduct.timestamp = new Date().toLocaleString('fr-FR');
+            } else {
+                const newProduct = {
+                    id: Date.now(),
+                    barcode: barcode,
+                    code: code,
+                    label: label,
+                    quantity: 1, // Initialize quantity to 1 for manual add
+                    timestamp: new Date().toLocaleString('fr-FR')
+                };
+                scannedProducts.unshift(newProduct);
+            }
+            productDatabase.push({ barcode, code, label }); // Add to productDatabase for future scans
+            updateRecentScans();
+            updateScanCount();
+            showNotification(`Produit ajouté manuellement: ${label}`, 'success');
+            cancelManualAdd();
+        }
+
+        function cancelManualAdd() {
+            document.getElementById('manualAdd').classList.add('hidden');
+            document.getElementById('manualScan').value = '';
+        }
+
+        function updateRecentScans() {
+            const recentScansDiv = document.getElementById('recentScans');
+            recentScansDiv.innerHTML = '';
+
+            if (scannedProducts.length === 0) {
+                recentScansDiv.innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        <i class="fas fa-barcode text-4xl mb-2"></i>
+                        <p>Aucun produit scanné</p>
+                    </div>
+                `;
+                return;
+            }
+
+            scannedProducts.forEach(product => {
+                const productDiv = document.createElement('div');
+                productDiv.classList.add('flex', 'items-center', 'justify-between', 'p-3', 'border-b', 'last:border-b-0', 'depot-item');
+                productDiv.innerHTML = `
+                    <div>
+                        <p class="font-medium text-gray-800">${product.label}</p>
+                        <p class="text-sm text-gray-600">Code: ${product.code} | Barcode: ${product.barcode}</p>
+                        <p class="text-xs text-gray-500">Scanné le: ${product.timestamp}</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <input type="number" min="1" value="${product.quantity}" 
+                               class="w-16 p-1 border rounded text-center" 
+                               onchange="updateQuantity(${product.id}, this.value)">
+                        <button class="text-blue-500 hover:text-blue-700" onclick="editProduct(${product.id})"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="text-red-500 hover:text-red-700" onclick="deleteProduct(${product.id})"><i class="fas fa-trash"></i></button>
+                    </div>
+                `;
+                recentScansDiv.appendChild(productDiv);
+            });
+        }
+
+        function updateQuantity(id, newQuantity) {
+            const product = scannedProducts.find(p => p.id === id);
+            if (product) {
+                const quantity = parseInt(newQuantity);
+                if (!isNaN(quantity) && quantity >= 1) {
+                    product.quantity = quantity;
+                    updateScanCount(); // Update total count and results table
+                    showNotification(`Quantité mise à jour pour ${product.label}`, 'success');
+                } else {
+                    showNotification('La quantité doit être un nombre valide et supérieur ou égal à 1.', 'error');
+                    // Revert input field to original quantity if invalid
+                    updateRecentScans(); 
+                }
+            }
+        }
+
+        function updateScanCount() {
+            // Sum up quantities for total items
+            const totalScannedItems = scannedProducts.reduce((sum, product) => sum + product.quantity, 0);
+            document.getElementById('scanCount').textContent = totalScannedItems;
+            document.getElementById('totalItems').textContent = totalScannedItems;
+            updateResultsTable();
+        }
+
+        function updateResultsTable() {
+            const resultsTableDiv = document.getElementById('resultsTable');
+            resultsTableDiv.innerHTML = '';
+
+            if (scannedProducts.length === 0) {
+                resultsTableDiv.innerHTML = `
+                    <div class="p-4 text-center text-gray-500">
+                        <i class="fas fa-inbox text-4xl mb-2"></i>
+                        <p>Aucun résultat à afficher</p>
+                    </div>
+                `;
+                document.getElementById('clearResults').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('clearResults').classList.remove('hidden');
+
+            // Group products by barcode for results table
+            const groupedProducts = {};
+            scannedProducts.forEach(product => {
+                if (groupedProducts[product.barcode]) {
+                    groupedProducts[product.barcode].quantity += product.quantity;
+                    if (new Date(product.timestamp) > new Date(groupedProducts[product.barcode].timestamp)) {
+                        groupedProducts[product.barcode].timestamp = product.timestamp;
+                    }
+                } else {
+                    groupedProducts[product.barcode] = { ...product };
+                }
+            });
+
+            const table = document.createElement('table');
+            table.classList.add('min-w-full', 'divide-y', 'divide-gray-200');
+            table.innerHTML = `
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code-barres</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code Article</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Libellé</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantité</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date/Heure Dernier Scan</th>
+                        <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                </tbody>
+            `;
+            const tbody = table.querySelector('tbody');
+
+            Object.values(groupedProducts).forEach(product => {
+                const row = tbody.insertRow();
+                row.innerHTML = `
+                    <td class="px-4 py-2 whitespace-nowrap text-sm font-medium text-gray-900">${product.barcode}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${product.code}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${product.label}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${product.quantity}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-500">${product.timestamp}</td>
+                    <td class="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                        <button class="text-blue-600 hover:text-blue-900 mr-2" onclick="editProduct(${product.id})"><i class="fas fa-pencil-alt"></i></button>
+                        <button class="text-red-600 hover:text-red-900" onclick="deleteProduct(${product.id})"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+            });
+            resultsTableDiv.appendChild(table);
+        }
+
+        function deleteProduct(id) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
+                scannedProducts = scannedProducts.filter(product => product.id !== id);
+                updateRecentScans();
+                updateScanCount();
+                showNotification('Produit supprimé.', 'success');
+            }
+        }
+
+        function editProduct(id) {
+            const productToEdit = scannedProducts.find(product => product.id === id);
+            if (!productToEdit) return;
+
+            const newBarcode = prompt('Modifier le code-barres:', productToEdit.barcode);
+            const newCode = prompt('Modifier le code article:', productToEdit.code);
+            const newLabel = prompt('Modifier le libellé:', productToEdit.label);
+            const newQuantity = prompt('Modifier la quantité:', productToEdit.quantity);
+
+            if (newBarcode !== null && newCode !== null && newLabel !== null && newQuantity !== null) {
+                const quantity = parseInt(newQuantity);
+                if (!isNaN(quantity) && quantity >= 1) {
+                    productToEdit.barcode = newBarcode;
+                    productToEdit.code = newCode;
+                    productToEdit.label = newLabel;
+                    productToEdit.quantity = quantity;
+                    productToEdit.timestamp = new Date().toLocaleString('fr-FR'); // Update timestamp on edit
+                    updateRecentScans();
+                    updateScanCount();
+                    showNotification('Produit modifié avec succès.', 'success');
+                } else {
+                    showNotification('La quantité doit être un nombre valide et supérieur ou égal à 1.', 'error');
+                }
+            }
+        }
+
+        function exportResults() {
+            if (scannedProducts.length === 0) {
+                showNotification('Aucun produit à exporter.', 'warning');
+                return;
+            }
+
+            // Group products by barcode for export
+            const groupedProducts = {};
+            scannedProducts.forEach(product => {
+                if (groupedProducts[product.barcode]) {
+                    groupedProducts[product.barcode].quantity += product.quantity;
+                    if (new Date(product.timestamp) > new Date(groupedProducts[product.barcode].timestamp)) {
+                        groupedProducts[product.barcode].timestamp = product.timestamp;
+                    }
+                } else {
+                    groupedProducts[product.barcode] = { ...product };
+                }
+            });
+
+            const data = Object.values(groupedProducts).map(p => [
+                p.barcode,
+                p.code,
+                p.label,
+                p.quantity,
+                p.timestamp,
+                config.depot,
+                config.zone,
+                config.date
+            ]);
+
+            const ws = XLSX.utils.aoa_to_sheet([
+                ['CodeBarres', 'CodeArticle', 'Libelle', 'Quantité', 'Date/Heure Dernier Scan', 'Dépôt', 'Zone', 'Date Inventaire'],
+                ...data
+            ]);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Inventaire');
+
+            const fileName = `Inventaire_${config.depot}_${config.zone}_${config.date}.xlsx`;
+            XLSX.writeFile(wb, fileName);
+
+            showNotification('Exportation Excel réussie !', 'success');
+        }
+
+        function clearResults() {
+            if (confirm('Êtes-vous sûr de vouloir vider tous les résultats scannés ?')) {
+                scannedProducts = [];
+                updateRecentScans();
+                updateScanCount();
+                showNotification('Tous les résultats ont été vidés.', 'success');
+            }
+        }
+    </script>
+</body>
+</html>
+
+
