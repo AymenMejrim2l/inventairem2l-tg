@@ -611,7 +611,7 @@ function updateExportFileName() {
 }
 
 // --- Scan Feedback (Visual & Sound) ---
-const successSound = new Audio('https://www.soundjay.com/button/button-3.mp3'); // Nouveau son de succès
+const successSound = new Audio('https://www.soundjay.com/button/button-1.mp3'); // Nouveau son de succès (bip)
 const errorSound = new Audio('https://www.soundjay.com/misc/fail-buzzer-01.mp3'); // Example sound
 
 function triggerScanFeedback(type) {
