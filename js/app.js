@@ -288,13 +288,15 @@ function performScan() {
     const productInfo = productDatabase.find(p => p.barcode === barcode);
 
     if (productInfo) {
-        // Check if product already exists in scannedProducts
-        const existingProduct = scannedProducts.find(p => p.barcode === barcode);
+        const existingProductIndex = scannedProducts.findIndex(p => p.barcode === barcode);
 
-        if (existingProduct) {
-            // If exists, increment quantity and update timestamp
+        if (existingProductIndex !== -1) {
+            // If exists, remove it, update, and add back to top
+            const existingProduct = scannedProducts[existingProductIndex];
+            scannedProducts.splice(existingProductIndex, 1); // Remove from current position
             existingProduct.quantity++;
             existingProduct.timestamp = new Date().toLocaleString('fr-FR');
+            scannedProducts.unshift(existingProduct); // Add back to the beginning
         } else {
             // If not exists, add new product with quantity 1
             const newProduct = {
@@ -333,12 +335,14 @@ function addManualProduct() {
         return;
     }
 
-    // Check if product already exists in scannedProducts
-    const existingProduct = scannedProducts.find(p => p.barcode === barcode);
+    const existingProductIndex = scannedProducts.findIndex(p => p.barcode === barcode);
 
-    if (existingProduct) {
+    if (existingProductIndex !== -1) {
+        const existingProduct = scannedProducts[existingProductIndex];
+        scannedProducts.splice(existingProductIndex, 1); // Remove from current position
         existingProduct.quantity++;
         existingProduct.timestamp = new Date().toLocaleString('fr-FR');
+        scannedProducts.unshift(existingProduct); // Add back to the beginning
     } else {
         const newProduct = {
             id: Date.now(),
