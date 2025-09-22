@@ -4,10 +4,13 @@
   "description": "M2L&TG Inventory application for SUNMI L2s terminal",
   "main": "M2l&TG Inventory1 .html",
   "scripts": {
-    "start": "live-server --port=3000 --entry-file=M2l&TG Inventory1 .html",
-    "dev": "live-server --port=3000 --entry-file=M2l&TG Inventory1 .html"
+    "start": "live-server --port=3000 --entry-file=\"M2l&TG Inventory1 .html\"",
+    "dev": "live-server --port=3000 --entry-file=\"M2l&TG Inventory1 .html\""
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "devDependencies": {
+    "live-server": "^1.2.2"
+  }
 }
