@@ -1,7 +1,7 @@
 const CACHE_NAME = 'm2ltg-inventory-cache-v1';
 const urlsToCache = [
   './',
-  './M2l&TG Inventory1 .html',
+  './index.html',
   './js/app.js',
   './js/storage.js',
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',

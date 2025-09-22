@@ -2,7 +2,7 @@
   "name": "M2L&TG Inventory",
   "short_name": "Inventory App",
   "description": "Application d'inventaire pour terminal SUNMI L2s",
-  "start_url": "./M2l&TG Inventory1 .html",
+  "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f8f8f8",
   "theme_color": "#2196F3",
