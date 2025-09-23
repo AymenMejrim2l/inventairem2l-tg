@@ -1,4 +1,4 @@
-const CACHE_NAME = 'm2ltg-inventory-cache-v3'; // Version du cache incrémentée
+const CACHE_NAME = 'm2ltg-inventory-cache-v4'; // Version du cache incrémentée
 const urlsToCache = [
   './',
   './index.html',

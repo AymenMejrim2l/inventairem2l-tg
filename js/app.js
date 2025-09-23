@@ -617,10 +617,10 @@ const errorSound = new Audio('https://www.soundjay.com/misc/fail-buzzer-01.mp3')
 function triggerScanFeedback(type) {
     if (type === 'success') {
         mobileContainer.classList.add('scan-success');
-        successSound.play().catch(e => console.error("Error playing sound:", e));
+        successSound.play().catch(e => console.error("Error playing success sound:", e));
     } else if (type === 'error') {
         mobileContainer.classList.add('scan-error');
-        errorSound.play().catch(e => console.error("Error playing sound:", e));
+        errorSound.play().catch(e => console.error("Error playing error sound:", e));
     }
 
     setTimeout(() => {
