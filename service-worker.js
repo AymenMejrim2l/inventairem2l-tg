@@ -1,4 +1,4 @@
-const CACHE_NAME = 'm2ltg-inventory-cache-v1';
+const CACHE_NAME = 'm2ltg-inventory-cache-v2'; // Version du cache incrémentée
 const urlsToCache = [
   './',
   './index.html',
@@ -7,7 +7,7 @@ const urlsToCache = [
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
   'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://www.soundjay.com/button/button-3.mp3', // Nouveau son de succès (bip)
+  'https://www.soundjay.com/button/button-09.mp3', // Nouveau son de succès (bip)
   'https://www.soundjay.com/misc/fail-buzzer-01.mp3' // Son d'erreur
   // Ajoutez ici d'autres ressources que vous souhaitez mettre en cache
 ];
