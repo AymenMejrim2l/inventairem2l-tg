@@ -589,7 +589,13 @@ function exportResults() {
     const fileName = `Inventaire_${currentDepot}_${currentZone}_${currentDate}_${currentInventoriedBy}.xlsx`;
     XLSX.writeFile(wb, fileName);
 
-    showNotification('Exportation Excel réussie !', 'success');
+    // Vider les résultats après l'exportation réussie
+    scannedProducts = [];
+    clearState('scannedProducts'); // Efface les produits scannés du stockage
+    updateRecentScans(); // Met à jour l'affichage des scans récents
+    updateScanCount(); // Met à jour le compteur de scans et le tableau des résultats
+
+    showNotification('Exportation Excel réussie et liste des résultats vidée !', 'success');
 }
 
 function clearResults() {
