@@ -40,10 +40,11 @@ const scanResultDiv = document.getElementById('scanResult');
 const manualAddDiv = document.getElementById('manualAdd');
 const manualBarcodeInput = document.getElementById('manualBarcode');
 const manualCodeInput = document.getElementById('manualCode');
-const manualLabelInput = document.getElementById("manualLabel"); // Correction ici
+const manualLabelInput = document.getElementById("manualLabel");
 const addManualProductBtn = document.getElementById('addManualProduct');
 const cancelManualBtn = document.getElementById('cancelManual');
 const recentScansDiv = document.getElementById('recentScans');
+const emptyRecentScansPlaceholder = document.getElementById('emptyRecentScansPlaceholder'); // Nouveau DOM element
 
 const totalItemsSpan = document.getElementById('totalItems');
 const exportFileNameSpan = document.getElementById('exportFileName');
@@ -80,8 +81,14 @@ function initializeApp() {
 
     if (savedScannedProducts) {
         scannedProducts = savedScannedProducts;
-        updateRecentScans();
+        // Initial rendering of recent scans
+        scannedProducts.forEach(product => {
+            recentScansDiv.appendChild(createProductItemElement(product));
+        });
+        toggleEmptyRecentScansPlaceholder(); // Show/hide placeholder based on loaded products
         updateScanCount();
+    } else {
+        toggleEmptyRecentScansPlaceholder(); // Show placeholder if no products loaded
     }
 
     // Set current date for display (this is separate from the input field)
@@ -303,6 +310,53 @@ function showNotification(message, type) {
     }, 3000);
 }
 
+// --- Helper functions for Recent Scans DOM manipulation ---
+function createProductItemElement(product) {
+    const productDiv = document.createElement('div');
+    productDiv.classList.add('flex', 'items-center', 'justify-between', 'p-3', 'border-b', 'last:border-b-0', 'depot-item');
+    productDiv.dataset.productId = product.id; // Use data-product-id for easy lookup
+    updateProductItemElement(productDiv, product); // Populate content
+    return productDiv;
+}
+
+function updateProductItemElement(element, product) {
+    element.innerHTML = `
+        <div>
+            <p class="font-medium text-gray-800">${product.label}</p>
+            <p class="text-sm text-gray-600">Code: ${product.code} | Barcode: ${product.barcode}</p>
+            <p class="text-xs text-gray-500">Scanné le: ${product.timestamp}</p>
+        </div>
+        <div class="flex items-center space-x-2">
+            <input type="number" min="1" value="${product.quantity}"
+                   class="w-16 p-1 border rounded text-center"
+                   onchange="window.updateQuantity(${product.id}, this.value)">
+            <button class="text-blue-500 hover:text-blue-700" onclick="window.editProduct(${product.id})"><i class="fas fa-pencil-alt"></i></button>
+            <button class="text-red-500 hover:text-red-700" onclick="window.deleteProduct(${product.id})"><i class="fas fa-trash"></i></button>
+        </div>
+    `;
+}
+
+function toggleEmptyRecentScansPlaceholder() {
+    if (scannedProducts.length === 0) {
+        if (emptyRecentScansPlaceholder) {
+            emptyRecentScansPlaceholder.classList.remove('hidden');
+        } else {
+            // If placeholder was removed, recreate it
+            const placeholder = document.createElement('div');
+            placeholder.id = 'emptyRecentScansPlaceholder';
+            placeholder.classList.add('p-4', 'text-center', 'text-gray-500');
+            placeholder.innerHTML = `<i class="fas fa-barcode text-4xl mb-2"></i><p>Aucun produit scanné</p>`;
+            recentScansDiv.appendChild(placeholder);
+        }
+    } else {
+        if (emptyRecentScansPlaceholder) {
+            emptyRecentScansPlaceholder.classList.add('hidden');
+        }
+    }
+}
+// --- End Helper functions ---
+
+
 function performScan() {
     const barcode = manualScanInput.value.trim();
     if (!barcode) {
@@ -321,29 +375,43 @@ function performScan() {
     const productInfo = productDatabase.find(p => p.barcode === barcode);
 
     if (productInfo) {
-        const existingProductIndex = scannedProducts.findIndex(p => p.barcode === barcode);
+        toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is scanned
 
-        if (existingProductIndex !== -1) {
-            // If exists, remove it, update, and add back to top
-            const existingProduct = scannedProducts[existingProductIndex];
-            scannedProducts.splice(existingProductIndex, 1); // Remove from current position
-            existingProduct.quantity++;
-            existingProduct.timestamp = new Date().toLocaleString('fr-FR');
-            scannedProducts.unshift(existingProduct); // Add back to the beginning
+        let productToUpdate = scannedProducts.find(p => p.barcode === barcode);
+        let productElement;
+
+        if (productToUpdate) {
+            // Product exists, update quantity and move to front
+            scannedProducts = scannedProducts.filter(p => p.id !== productToUpdate.id); // Remove old entry
+            productToUpdate.quantity++;
+            productToUpdate.timestamp = new Date().toLocaleString('fr-FR');
+            scannedProducts.unshift(productToUpdate); // Add updated to front
+
+            productElement = document.querySelector(`[data-product-id="${productToUpdate.id}"]`);
+            if (productElement) {
+                updateProductItemElement(productElement, productToUpdate); // Update content
+                recentScansDiv.prepend(productElement); // Move to top
+            } else {
+                // Fallback: if element somehow not found, recreate and prepend
+                productElement = createProductItemElement(productToUpdate);
+                recentScansDiv.prepend(productElement);
+            }
         } else {
-            // If not exists, add new product with quantity 1
+            // New product
             const newProduct = {
-                id: Date.now(), // Unique ID for each scanned item
+                id: Date.now(),
                 barcode: productInfo.barcode,
                 code: productInfo.code,
                 label: productInfo.label,
-                quantity: 1, // Initialize quantity to 1
+                quantity: 1,
                 timestamp: new Date().toLocaleString('fr-FR')
             };
-            scannedProducts.unshift(newProduct); // Add to the beginning
+            scannedProducts.unshift(newProduct); // Add new to front
+
+            productElement = createProductItemElement(newProduct);
+            recentScansDiv.prepend(productElement);
         }
         saveState('scannedProducts', scannedProducts); // Save scanned products
-        updateRecentScans();
         updateScanCount();
         showNotification(`Produit scanné: ${productInfo.label}`, 'success');
         manualScanInput.value = ''; // Clear input after successful scan
@@ -368,15 +436,29 @@ function addManualProduct() {
         return;
     }
 
-    const existingProductIndex = scannedProducts.findIndex(p => p.barcode === barcode);
+    toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is added
 
-    if (existingProductIndex !== -1) {
-        const existingProduct = scannedProducts[existingProductIndex];
-        scannedProducts.splice(existingProductIndex, 1); // Remove from current position
-        existingProduct.quantity++;
-        existingProduct.timestamp = new Date().toLocaleString('fr-FR');
-        scannedProducts.unshift(existingProduct); // Add back to the beginning
+    let productToUpdate = scannedProducts.find(p => p.barcode === barcode);
+    let productElement;
+
+    if (productToUpdate) {
+        // Product exists, update quantity and move to front
+        scannedProducts = scannedProducts.filter(p => p.id !== productToUpdate.id); // Remove old entry
+        productToUpdate.quantity++;
+        productToUpdate.timestamp = new Date().toLocaleString('fr-FR');
+        scannedProducts.unshift(productToUpdate); // Add updated to front
+
+        productElement = document.querySelector(`[data-product-id="${productToUpdate.id}"]`);
+        if (productElement) {
+            updateProductItemElement(productElement, productToUpdate); // Update content
+            recentScansDiv.prepend(productElement); // Move to top
+        } else {
+            // Fallback: if element somehow not found, recreate and prepend
+            productElement = createProductItemElement(productToUpdate);
+            recentScansDiv.prepend(productElement);
+        }
     } else {
+        // New product
         const newProduct = {
             id: Date.now(),
             barcode: barcode,
@@ -385,11 +467,14 @@ function addManualProduct() {
             quantity: 1, // Initialize quantity to 1 for manual add
             timestamp: new Date().toLocaleString('fr-FR')
         };
-        scannedProducts.unshift(newProduct);
+        scannedProducts.unshift(newProduct); // Add new to front
+
+        productElement = createProductItemElement(newProduct);
+        recentScansDiv.prepend(productElement);
     }
+
     productDatabase.push({ barcode, code, label }); // Add to productDatabase for future scans
     saveState('scannedProducts', scannedProducts); // Save scanned products
-    updateRecentScans();
     updateScanCount();
     showNotification(`Produit ajouté manuellement: ${label}`, 'success');
     cancelManualAdd();
@@ -401,39 +486,7 @@ function cancelManualAdd() {
     manualScanInput.value = '';
 }
 
-function updateRecentScans() {
-    recentScansDiv.innerHTML = '';
-
-    if (scannedProducts.length === 0) {
-        recentScansDiv.innerHTML = `
-            <div class="p-4 text-center text-gray-500">
-                <i class="fas fa-barcode text-4xl mb-2"></i>
-                <p>Aucun produit scanné</p>
-            </div>
-        `;
-        return;
-    }
-
-    scannedProducts.forEach(product => {
-        const productDiv = document.createElement('div');
-        productDiv.classList.add('flex', 'items-center', 'justify-between', 'p-3', 'border-b', 'last:border-b-0', 'depot-item');
-        productDiv.innerHTML = `
-            <div>
-                <p class="font-medium text-gray-800">${product.label}</p>
-                <p class="text-sm text-gray-600">Code: ${product.code} | Barcode: ${product.barcode}</p>
-                <p class="text-xs text-gray-500">Scanné le: ${product.timestamp}</p>
-            </div>
-            <div class="flex items-center space-x-2">
-                <input type="number" min="1" value="${product.quantity}"
-                       class="w-16 p-1 border rounded text-center"
-                       onchange="window.updateQuantity(${product.id}, this.value)">
-                <button class="text-blue-500 hover:text-blue-700" onclick="window.editProduct(${product.id})"><i class="fas fa-pencil-alt"></i></button>
-                <button class="text-red-500 hover:text-red-700" onclick="window.deleteProduct(${product.id})"><i class="fas fa-trash"></i></button>
-            </div>
-        `;
-        recentScansDiv.appendChild(productDiv);
-    });
-}
+// Removed updateRecentScans() as its logic is now integrated into other functions
 
 // Expose functions to global scope for inline event handlers
 window.updateQuantity = function(id, newQuantity) {
@@ -443,12 +496,22 @@ window.updateQuantity = function(id, newQuantity) {
         if (!isNaN(quantity) && quantity >= 1) {
             product.quantity = quantity;
             saveState('scannedProducts', scannedProducts); // Save scanned products
+
+            const productElement = document.querySelector(`[data-product-id="${product.id}"]`);
+            if (productElement) {
+                // Only update the quantity input value, other fields are static for this action
+                productElement.querySelector('input[type="number"]').value = quantity;
+            }
+            
             updateScanCount(); // Update total count and results table
             showNotification(`Quantité mise à jour pour ${product.label}`, 'success');
         } else {
             showNotification('La quantité doit être un nombre valide et supérieur ou égal à 1.', 'error');
             // Revert input field to original quantity if invalid
-            updateRecentScans();
+            const productElement = document.querySelector(`[data-product-id="${product.id}"]`);
+            if (productElement) {
+                productElement.querySelector('input[type="number"]').value = product.quantity;
+            }
         }
     }
 };
@@ -462,7 +525,7 @@ window.updateScanCount = function() {
 };
 
 function updateResultsTable() {
-    resultsTableDiv.innerHTML = '';
+    resultsTableDiv.innerHTML = ''; // Clear previous table content
 
     if (scannedProducts.length === 0) {
         resultsTableDiv.innerHTML = `
@@ -529,7 +592,13 @@ window.deleteProduct = function(id) {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
         scannedProducts = scannedProducts.filter(product => product.id !== id);
         saveState('scannedProducts', scannedProducts); // Save scanned products
-        updateRecentScans();
+
+        const productElement = document.querySelector(`[data-product-id="${id}"]`);
+        if (productElement) {
+            productElement.remove(); // Remove from DOM
+        }
+        
+        toggleEmptyRecentScansPlaceholder(); // Show placeholder if list is now empty
         updateScanCount();
         showNotification('Produit supprimé.', 'success');
     }
@@ -553,7 +622,13 @@ window.editProduct = function(id) {
             productToEdit.quantity = quantity;
             productToEdit.timestamp = new Date().toLocaleString('fr-FR'); // Update timestamp on edit
             saveState('scannedProducts', scannedProducts); // Save scanned products
-            updateRecentScans();
+
+            const productElement = document.querySelector(`[data-product-id="${id}"]`);
+            if (productElement) {
+                updateProductItemElement(productElement, productToEdit); // Update content
+                recentScansDiv.prepend(productElement); // Move to top
+            }
+            
             updateScanCount();
             showNotification('Produit modifié avec succès.', 'success');
         } else {
@@ -631,7 +706,9 @@ function exportResults() {
     // Vider les résultats après l'exportation réussie
     scannedProducts = [];
     clearState('scannedProducts'); // Efface les produits scannés du stockage
-    updateRecentScans(); // Met à jour l'affichage des scans récents
+    // Clear recent scans DOM
+    recentScansDiv.innerHTML = '';
+    toggleEmptyRecentScansPlaceholder(); // Show placeholder
     updateScanCount(); // Met à jour le compteur de scans et le tableau des résultats
 
     showNotification('Exportation Excel réussie et liste des résultats vidée !', 'success');
@@ -641,7 +718,9 @@ function clearResults() {
     if (confirm('Êtes-vous sûr de vouloir vider tous les résultats scannés ?')) {
         scannedProducts = [];
         clearState('scannedProducts'); // Clear scanned products from storage
-        updateRecentScans();
+        // Clear recent scans DOM
+        recentScansDiv.innerHTML = '';
+        toggleEmptyRecentScansPlaceholder(); // Show placeholder
         updateScanCount();
         showNotification('Tous les résultats ont été vidés.', 'success');
     }
