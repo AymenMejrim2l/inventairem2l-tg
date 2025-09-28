@@ -82,6 +82,10 @@ function initializeApp() {
     if (savedScannedProducts) {
         scannedProducts = savedScannedProducts;
         // Initial rendering of recent scans
+        // Clear existing placeholder if any before adding products
+        if (emptyRecentScansPlaceholder) {
+            emptyRecentScansPlaceholder.classList.add('hidden');
+        }
         scannedProducts.forEach(product => {
             recentScansDiv.appendChild(createProductItemElement(product));
         });
@@ -375,8 +379,6 @@ function performScan() {
     const productInfo = productDatabase.find(p => p.barcode === barcode);
 
     if (productInfo) {
-        toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is scanned
-
         let productToUpdate = scannedProducts.find(p => p.barcode === barcode);
         let productElement;
 
@@ -413,6 +415,7 @@ function performScan() {
         }
         saveState('scannedProducts', scannedProducts); // Save scanned products
         updateScanCount();
+        toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is scanned
         showNotification(`Produit scanné: ${productInfo.label}`, 'success');
         manualScanInput.value = ''; // Clear input after successful scan
         triggerScanFeedback('success');
@@ -435,8 +438,6 @@ function addManualProduct() {
         showNotification('Veuillez remplir tous les champs pour l\'ajout manuel.', 'error');
         return;
     }
-
-    toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is added
 
     let productToUpdate = scannedProducts.find(p => p.barcode === barcode);
     let productElement;
@@ -476,6 +477,7 @@ function addManualProduct() {
     productDatabase.push({ barcode, code, label }); // Add to productDatabase for future scans
     saveState('scannedProducts', scannedProducts); // Save scanned products
     updateScanCount();
+    toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is added
     showNotification(`Produit ajouté manuellement: ${label}`, 'success');
     cancelManualAdd();
     triggerScanFeedback('success');
@@ -616,11 +618,17 @@ window.editProduct = function(id) {
     if (newBarcode !== null && newCode !== null && newLabel !== null && newQuantity !== null) {
         const quantity = parseInt(newQuantity);
         if (!isNaN(quantity) && quantity >= 1) {
+            // Remove old entry from array to re-add at the front
+            scannedProducts = scannedProducts.filter(p => p.id !== id);
+
             productToEdit.barcode = newBarcode;
             productToEdit.code = newCode;
             productToEdit.label = newLabel;
             productToEdit.quantity = quantity;
             productToEdit.timestamp = new Date().toLocaleString('fr-FR'); // Update timestamp on edit
+            
+            scannedProducts.unshift(productToEdit); // Add updated product to front
+
             saveState('scannedProducts', scannedProducts); // Save scanned products
 
             const productElement = document.querySelector(`[data-product-id="${id}"]`);
