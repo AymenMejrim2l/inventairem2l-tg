@@ -1,5 +1,7 @@
 // js/app.js
 import { store } from './store.js';
+import { showNotification } from './ui/notifications.js';
+import { triggerScanFeedback } from './ui/feedback.js';
 
 // Application State (now managed by the store, only transient state here)
 let lastScanTime = 0;
@@ -43,7 +45,7 @@ const resultsTableDiv = document.getElementById('resultsTable');
 const clearResultsBtn = document.getElementById('clearResults');
 
 const currentDateDiv = document.getElementById('currentDate');
-const mobileContainer = document.querySelector('.mobile-container');
+// const mobileContainer = document.querySelector('.mobile-container'); // Moved to feedback.js
 
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
@@ -268,26 +270,6 @@ function displayImportSuccess(message) {
     importStatusDiv.classList.add('bg-green-100', 'text-green-800', 'p-2', 'rounded');
     importStatusDiv.innerHTML = `<i class="fas fa-check-circle mr-2"></i>${message}`;
     showNotification(message, 'success');
-}
-
-function showNotification(message, type) {
-    const notificationDiv = document.createElement('div');
-    notificationDiv.textContent = message;
-    notificationDiv.classList.add('notification', 'fixed', 'bottom-4', 'left-1/2', '-translate-x-1/2', 'px-4', 'py-2', 'rounded-lg', 'shadow-lg', 'text-white', 'z-50');
-
-    if (type === 'success') {
-        notificationDiv.classList.add('bg-green-500');
-    } else if (type === 'error') {
-        notificationDiv.classList.add('bg-red-500');
-    } else if (type === 'warning') {
-        notificationDiv.classList.add('bg-yellow-500');
-    }
-
-    document.body.appendChild(notificationDiv);
-
-    setTimeout(() => {
-        notificationDiv.remove();
-    }, 3000);
 }
 
 // --- Helper functions for Recent Scans DOM manipulation ---
@@ -519,6 +501,11 @@ window.editProduct = function(id) {
             showNotification('Produit modifié avec succès.', 'success');
         } else {
             showNotification('La quantité doit être un nombre valide et supérieur ou égal à 1.', 'error');
+            // Revert input field to original quantity if invalid
+            const productElement = document.querySelector(`[data-product-id="${product.id}"]`);
+            if (productElement) {
+                productElement.querySelector('input[type="number"]').value = product.quantity;
+            }
         }
     }
 };
@@ -610,22 +597,4 @@ function updateExportFileName() {
     const date = dateInput.value || 'date';
     const inventoriedBy = inventoriedBySelect.value || 'inventorieur';
     exportFileNameSpan.textContent = `${depot}_${zone}_${date}_${inventoriedBy}`;
-}
-
-// --- Scan Feedback (Visual & Sound) ---
-const successSound = new Audio('https://www.soundjay.com/button/button-09.mp3');
-const errorSound = new Audio('https://www.soundjay.com/misc/fail-buzzer-01.mp3');
-
-function triggerScanFeedback(type) {
-    if (type === 'success') {
-        mobileContainer.classList.add('scan-success');
-        successSound.play().catch(e => console.error("Error playing success sound:", e));
-    } else if (type === 'error') {
-        mobileContainer.classList.add('scan-error');
-        errorSound.play().catch(e => console.error("Error playing error sound:", e));
-    }
-
-    setTimeout(() => {
-        mobileContainer.classList.remove('scan-success', 'scan-error');
-    }, 500); // Remove feedback classes after 0.5 seconds
 }
