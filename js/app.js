@@ -40,7 +40,7 @@ const scanResultDiv = document.getElementById('scanResult');
 const manualAddDiv = document.getElementById('manualAdd');
 const manualBarcodeInput = document.getElementById('manualBarcode');
 const manualCodeInput = document.getElementById('manualCode');
-const manualLabelInput = document.getElementById('manualLabel');
+const manualLabelInput = document="manualLabelInput";
 const addManualProductBtn = document.getElementById('addManualProduct');
 const cancelManualBtn = document.getElementById('cancelManual');
 const recentScansDiv = document.getElementById('recentScans');
@@ -587,7 +587,20 @@ function exportResults() {
     XLSX.utils.book_append_sheet(wb, ws, 'Inventaire');
 
     const fileName = `Inventaire_${currentDepot}_${currentZone}_${currentDate}_${currentInventoriedBy}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    
+    // --- MODIFICATION ICI : Utilisation de Blob pour le téléchargement ---
+    const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([wbout], { type: 'application/octet-stream' });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a); // Nécessaire pour Firefox
+    a.click();
+    document.body.removeChild(a); // Nettoyage
+    URL.revokeObjectURL(url); // Libérer l'URL de l'objet
+    // --- FIN DE LA MODIFICATION ---
 
     // Vider les résultats après l'exportation réussie
     scannedProducts = [];
