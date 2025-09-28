@@ -1,18 +1,8 @@
 // js/app.js
-import { saveState, loadState, clearState } from './storage.js';
+import { store } from './store.js';
 
-// Application State
-let currentTab = 'config';
-let isConfigured = false;
-let scannedProducts = []; // Now stores unique products with quantities
-let productDatabase = [];
+// Application State (now managed by the store, only transient state here)
 let lastScanTime = 0;
-let config = {
-    depot: '',
-    zone: '',
-    inventoriedBy: '', // Nouveau champ pour la personne qui inventorie
-    date: ''
-};
 
 // DOM Elements (cached for performance)
 const configTabBtn = document.getElementById('configTab');
@@ -25,7 +15,7 @@ const resultsModule = document.getElementById('resultsModule');
 
 const depotSelect = document.getElementById('depotSelect');
 const zoneInput = document.getElementById('zoneInput');
-const inventoriedBySelect = document.getElementById('inventoriedBySelect'); // Nouveau DOM element
+const inventoriedBySelect = document.getElementById('inventoriedBySelect');
 const dateInput = document.getElementById('dateInput');
 const importExcelBtn = document.getElementById('importExcelBtn');
 const excelFile = document.getElementById('excelFile');
@@ -44,7 +34,7 @@ const manualLabelInput = document.getElementById("manualLabel");
 const addManualProductBtn = document.getElementById('addManualProduct');
 const cancelManualBtn = document.getElementById('cancelManual');
 const recentScansDiv = document.getElementById('recentScans');
-const emptyRecentScansPlaceholder = document.getElementById('emptyRecentScansPlaceholder'); // Nouveau DOM element
+const emptyRecentScansPlaceholder = document.getElementById('emptyRecentScansPlaceholder');
 
 const totalItemsSpan = document.getElementById('totalItems');
 const exportFileNameSpan = document.getElementById('exportFileName');
@@ -58,55 +48,30 @@ const mobileContainer = document.querySelector('.mobile-container');
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
     setupEventListeners();
+    store.subscribe(render); // S'abonner aux changements d'état pour rafraîchir l'UI
 });
 
 function initializeApp() {
-    // Load state from localStorage
-    const savedConfig = loadState('inventoryConfig');
-    const savedScannedProducts = loadState('scannedProducts');
+    const state = store.getState();
 
-    if (savedConfig) {
-        config = savedConfig;
-        depotSelect.value = config.depot;
-        zoneInput.value = config.zone;
-        inventoriedBySelect.value = config.inventoriedBy; // Charge la personne qui inventorie
-        dateInput.value = config.date;
-        isConfigured = true;
-        updateExportFileName();
-    } else {
-        // Si aucune configuration n'est sauvegardée, initialise la date à aujourd'hui
-        const today = new Date().toISOString().split('T')[0];
-        dateInput.value = today;
-    }
-
-    if (savedScannedProducts) {
-        scannedProducts = savedScannedProducts;
-        // Initial rendering of recent scans
-        // Clear existing placeholder if any before adding products
-        if (emptyRecentScansPlaceholder) {
-            emptyRecentScansPlaceholder.classList.add('hidden');
-        }
-        scannedProducts.forEach(product => {
-            recentScansDiv.appendChild(createProductItemElement(product));
-        });
-        toggleEmptyRecentScansPlaceholder(); // Show/hide placeholder based on loaded products
-        updateScanCount();
-    } else {
-        toggleEmptyRecentScansPlaceholder(); // Show placeholder if no products loaded
-    }
+    // Initialisation des champs de configuration depuis le store
+    depotSelect.value = state.config.depot;
+    zoneInput.value = state.config.zone;
+    inventoriedBySelect.value = state.config.inventoriedBy;
+    dateInput.value = state.config.date;
 
     // Set current date for display (this is separate from the input field)
     currentDateDiv.textContent = new Date().toLocaleDateString('fr-FR');
 
-    // Initial tab display
-    switchTab(currentTab);
+    // Rendu initial de l'UI
+    render(state);
 }
 
 function setupEventListeners() {
     // Tab navigation
-    configTabBtn.addEventListener('click', () => switchTab('config'));
-    scanTabBtn.addEventListener('click', () => switchTab('scan'));
-    resultsTabBtn.addEventListener('click', () => switchTab('results'));
+    configTabBtn.addEventListener('click', () => store.setCurrentTab('config'));
+    scanTabBtn.addEventListener('click', () => store.setCurrentTab('scan'));
+    resultsTabBtn.addEventListener('click', () => store.setCurrentTab('results'));
 
     // Configuration
     validateConfigBtn.addEventListener('click', validateConfiguration);
@@ -114,7 +79,7 @@ function setupEventListeners() {
     excelFile.addEventListener('change', handleExcelImport);
     depotSelect.addEventListener('change', updateExportFileName);
     zoneInput.addEventListener('input', updateExportFileName);
-    inventoriedBySelect.addEventListener('change', updateExportFileName); // Écouteur pour le nouveau champ
+    inventoriedBySelect.addEventListener('change', updateExportFileName);
 
     // Scanning
     scanBtn.addEventListener('click', performScan);
@@ -131,37 +96,49 @@ function setupEventListeners() {
     clearResultsBtn.addEventListener('click', clearResults);
 }
 
-function switchTab(tab) {
-    // Update tab buttons
+// Fonction de rendu principale qui réagit aux changements d'état
+function render(state) {
+    // Gérer l'affichage des onglets
     document.querySelectorAll('[id$="Tab"]').forEach(btn => {
         btn.classList.remove('bg-blue-600', 'text-white');
         btn.classList.add('text-gray-600');
     });
-    document.getElementById(tab + 'Tab').classList.add('bg-blue-600', 'text-white');
-    document.getElementById(tab + 'Tab').classList.remove('text-gray-600');
+    document.getElementById(state.currentTab + 'Tab').classList.add('bg-blue-600', 'text-white');
+    document.getElementById(state.currentTab + 'Tab').classList.remove('text-gray-600');
 
-    // Show/hide modules
+    // Gérer l'affichage des modules
     configModule.classList.add('hidden');
     scanModule.classList.add('hidden');
     resultsModule.classList.add('hidden');
-    document.getElementById(tab + 'Module').classList.remove('hidden');
+    document.getElementById(state.currentTab + 'Module').classList.remove('hidden');
 
-    currentTab = tab;
-
-    // Prevent access to scan/results without configuration
-    if ((tab === 'scan' || tab === 'results') && !isConfigured) {
+    // Empêcher l'accès aux onglets scan/results sans configuration
+    if ((state.currentTab === 'scan' || state.currentTab === 'results') && !state.isConfigured) {
         showNotification('Veuillez d\'abord configurer l\'inventaire', 'warning');
-        switchTab('config');
+        store.setCurrentTab('config'); // Revenir à l'onglet de configuration
+        return; // Arrêter le rendu pour éviter des erreurs
     }
+
+    // Mettre à jour les éléments spécifiques à chaque module
+    if (state.currentTab === 'scan') {
+        updateRecentScansUI(state.scannedProducts);
+        updateScanCountUI(state.scannedProducts);
+    } else if (state.currentTab === 'results') {
+        updateResultsTableUI(state.scannedProducts, state.config);
+        updateScanCountUI(state.scannedProducts); // Pour mettre à jour le total des articles
+        updateExportFileName(); // S'assurer que le nom du fichier d'export est à jour
+    }
+    // Pour l'onglet config, les champs sont déjà liés via value, pas de rendu spécifique ici
 }
 
 function validateConfiguration() {
     const depot = depotSelect.value;
     const zone = zoneInput.value;
-    const inventoriedBy = inventoriedBySelect.value; // Récupère la valeur du nouveau champ
+    const inventoriedBy = inventoriedBySelect.value;
     const date = dateInput.value;
+    const productDatabase = store.getState().productDatabase;
 
-    if (!depot || !zone || !inventoriedBy || !date) { // Ajoute inventoriedBy à la validation
+    if (!depot || !zone || !inventoriedBy || !date) {
         showNotification('Veuillez remplir tous les champs requis pour la configuration.', 'error');
         return;
     }
@@ -171,11 +148,10 @@ function validateConfiguration() {
         return;
     }
 
-    config = { depot, zone, inventoriedBy, date }; // Inclut inventoriedBy dans la configuration
-    isConfigured = true;
-    saveState('inventoryConfig', config); // Save config
+    store.setConfig({ depot, zone, inventoriedBy, date });
+    store.setIsConfigured(true);
     showNotification('Configuration validée avec succès !', 'success');
-    switchTab('scan'); // Move to scan tab after successful configuration
+    store.setCurrentTab('scan'); // Move to scan tab after successful configuration
 }
 
 function handleExcelImport(event) {
@@ -183,7 +159,7 @@ function handleExcelImport(event) {
     const file = event.target.files[0];
     importStatusDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
     importStatusDiv.innerHTML = '';
-    productDatabase = []; // Clear previous database on new import attempt
+    store.setProductDatabase([]); // Clear previous database on new import attempt
 
     if (!file) {
         console.log('handleExcelImport: Aucun fichier sélectionné.');
@@ -262,9 +238,9 @@ function handleExcelImport(event) {
                 return;
             }
 
-            productDatabase = importedData;
-            displayImportSuccess(`${productDatabase.length} articles importés avec succès.`);
-            console.log('handleExcelImport: Importation réussie. Nombre d\'articles:', productDatabase.length);
+            store.setProductDatabase(importedData);
+            displayImportSuccess(`${importedData.length} articles importés avec succès.`);
+            console.log('handleExcelImport: Importation réussie. Nombre d\'articles:', importedData.length);
 
         } catch (error) {
             displayImportError(`Erreur lors de l\'importation du fichier: ${error.message}`);
@@ -285,7 +261,7 @@ function displayImportError(message) {
     importStatusDiv.classList.add('bg-red-100', 'text-red-800', 'p-2', 'rounded');
     importStatusDiv.innerHTML = `<i class="fas fa-times-circle mr-2"></i>Erreur: ${message}`;
     showNotification(`Erreur lors de l\'importation: ${message}`, 'error');
-    productDatabase = []; // Ensure database is cleared on error
+    store.setProductDatabase([]); // Ensure database is cleared on error
 }
 
 function displayImportSuccess(message) {
@@ -340,12 +316,11 @@ function updateProductItemElement(element, product) {
     `;
 }
 
-function toggleEmptyRecentScansPlaceholder() {
+function toggleEmptyRecentScansPlaceholder(scannedProducts) {
     if (scannedProducts.length === 0) {
         if (emptyRecentScansPlaceholder) {
             emptyRecentScansPlaceholder.classList.remove('hidden');
         } else {
-            // If placeholder was removed, recreate it
             const placeholder = document.createElement('div');
             placeholder.id = 'emptyRecentScansPlaceholder';
             placeholder.classList.add('p-4', 'text-center', 'text-gray-500');
@@ -357,6 +332,15 @@ function toggleEmptyRecentScansPlaceholder() {
             emptyRecentScansPlaceholder.classList.add('hidden');
         }
     }
+}
+
+function updateRecentScansUI(scannedProducts) {
+    // Clear existing items to re-render based on the current state order
+    recentScansDiv.innerHTML = '';
+    scannedProducts.forEach(product => {
+        recentScansDiv.appendChild(createProductItemElement(product));
+    });
+    toggleEmptyRecentScansPlaceholder(scannedProducts);
 }
 // --- End Helper functions ---
 
@@ -375,47 +359,12 @@ function performScan() {
     }
     lastScanTime = now;
 
+    const productDatabase = store.getState().productDatabase;
     // Find product in database
     const productInfo = productDatabase.find(p => p.barcode === barcode);
 
     if (productInfo) {
-        let productToUpdate = scannedProducts.find(p => p.barcode === barcode);
-        let productElement;
-
-        if (productToUpdate) {
-            // Product exists, update quantity and move to front
-            scannedProducts = scannedProducts.filter(p => p.id !== productToUpdate.id); // Remove old entry
-            productToUpdate.quantity++;
-            productToUpdate.timestamp = new Date().toLocaleString('fr-FR');
-            scannedProducts.unshift(productToUpdate); // Add updated to front
-
-            productElement = document.querySelector(`[data-product-id="${productToUpdate.id}"]`);
-            if (productElement) {
-                updateProductItemElement(productElement, productToUpdate); // Update content
-                recentScansDiv.prepend(productElement); // Move to top
-            } else {
-                // Fallback: if element somehow not found, recreate and prepend
-                productElement = createProductItemElement(productToUpdate);
-                recentScansDiv.prepend(productElement);
-            }
-        } else {
-            // New product
-            const newProduct = {
-                id: Date.now(),
-                barcode: productInfo.barcode,
-                code: productInfo.code,
-                label: productInfo.label,
-                quantity: 1,
-                timestamp: new Date().toLocaleString('fr-FR')
-            };
-            scannedProducts.unshift(newProduct); // Add new to front
-
-            productElement = createProductItemElement(newProduct);
-            recentScansDiv.prepend(productElement);
-        }
-        saveState('scannedProducts', scannedProducts); // Save scanned products
-        updateScanCount();
-        toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is scanned
+        store.addOrUpdateScannedProduct(productInfo);
         showNotification(`Produit scanné: ${productInfo.label}`, 'success');
         manualScanInput.value = ''; // Clear input after successful scan
         triggerScanFeedback('success');
@@ -439,45 +388,7 @@ function addManualProduct() {
         return;
     }
 
-    let productToUpdate = scannedProducts.find(p => p.barcode === barcode);
-    let productElement;
-
-    if (productToUpdate) {
-        // Product exists, update quantity and move to front
-        scannedProducts = scannedProducts.filter(p => p.id !== productToUpdate.id); // Remove old entry
-        productToUpdate.quantity++;
-        productToUpdate.timestamp = new Date().toLocaleString('fr-FR');
-        scannedProducts.unshift(productToUpdate); // Add updated to front
-
-        productElement = document.querySelector(`[data-product-id="${productToUpdate.id}"]`);
-        if (productElement) {
-            updateProductItemElement(productElement, productToUpdate); // Update content
-            recentScansDiv.prepend(productElement); // Move to top
-        } else {
-            // Fallback: if element somehow not found, recreate and prepend
-            productElement = createProductItemElement(productToUpdate);
-            recentScansDiv.prepend(productElement);
-        }
-    } else {
-        // New product
-        const newProduct = {
-            id: Date.now(),
-            barcode: barcode,
-            code: code,
-            label: label,
-            quantity: 1, // Initialize quantity to 1 for manual add
-            timestamp: new Date().toLocaleString('fr-FR')
-        };
-        scannedProducts.unshift(newProduct); // Add new to front
-
-        productElement = createProductItemElement(newProduct);
-        recentScansDiv.prepend(productElement);
-    }
-
-    productDatabase.push({ barcode, code, label }); // Add to productDatabase for future scans
-    saveState('scannedProducts', scannedProducts); // Save scanned products
-    updateScanCount();
-    toggleEmptyRecentScansPlaceholder(); // Hide placeholder if an item is added
+    store.addOrUpdateScannedProduct({ barcode, code, label }, true); // Pass true for isManualAdd
     showNotification(`Produit ajouté manuellement: ${label}`, 'success');
     cancelManualAdd();
     triggerScanFeedback('success');
@@ -488,24 +399,14 @@ function cancelManualAdd() {
     manualScanInput.value = '';
 }
 
-// Removed updateRecentScans() as its logic is now integrated into other functions
-
 // Expose functions to global scope for inline event handlers
 window.updateQuantity = function(id, newQuantity) {
-    const product = scannedProducts.find(p => p.id === id);
+    const state = store.getState();
+    const product = state.scannedProducts.find(p => p.id === id);
     if (product) {
         const quantity = parseInt(newQuantity);
         if (!isNaN(quantity) && quantity >= 1) {
-            product.quantity = quantity;
-            saveState('scannedProducts', scannedProducts); // Save scanned products
-
-            const productElement = document.querySelector(`[data-product-id="${product.id}"]`);
-            if (productElement) {
-                // Only update the quantity input value, other fields are static for this action
-                productElement.querySelector('input[type="number"]').value = quantity;
-            }
-            
-            updateScanCount(); // Update total count and results table
+            store.updateScannedProductDetails(id, { quantity: quantity });
             showNotification(`Quantité mise à jour pour ${product.label}`, 'success');
         } else {
             showNotification('La quantité doit être un nombre valide et supérieur ou égal à 1.', 'error');
@@ -518,15 +419,14 @@ window.updateQuantity = function(id, newQuantity) {
     }
 };
 
-window.updateScanCount = function() {
+function updateScanCountUI(scannedProducts) {
     // Sum up quantities for total items
     const totalScannedItems = scannedProducts.reduce((sum, product) => sum + product.quantity, 0);
     scanCountSpan.textContent = totalScannedItems;
     totalItemsSpan.textContent = totalScannedItems;
-    updateResultsTable();
-};
+}
 
-function updateResultsTable() {
+function updateResultsTableUI(scannedProducts, config) {
     resultsTableDiv.innerHTML = ''; // Clear previous table content
 
     if (scannedProducts.length === 0) {
@@ -592,22 +492,14 @@ function updateResultsTable() {
 
 window.deleteProduct = function(id) {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce produit ?')) {
-        scannedProducts = scannedProducts.filter(product => product.id !== id);
-        saveState('scannedProducts', scannedProducts); // Save scanned products
-
-        const productElement = document.querySelector(`[data-product-id="${id}"]`);
-        if (productElement) {
-            productElement.remove(); // Remove from DOM
-        }
-        
-        toggleEmptyRecentScansPlaceholder(); // Show placeholder if list is now empty
-        updateScanCount();
+        store.deleteScannedProduct(id);
         showNotification('Produit supprimé.', 'success');
     }
 };
 
 window.editProduct = function(id) {
-    const productToEdit = scannedProducts.find(product => product.id === id);
+    const state = store.getState();
+    const productToEdit = state.scannedProducts.find(product => product.id === id);
     if (!productToEdit) return;
 
     const newBarcode = prompt('Modifier le code-barres:', productToEdit.barcode);
@@ -618,26 +510,12 @@ window.editProduct = function(id) {
     if (newBarcode !== null && newCode !== null && newLabel !== null && newQuantity !== null) {
         const quantity = parseInt(newQuantity);
         if (!isNaN(quantity) && quantity >= 1) {
-            // Remove old entry from array to re-add at the front
-            scannedProducts = scannedProducts.filter(p => p.id !== id);
-
-            productToEdit.barcode = newBarcode;
-            productToEdit.code = newCode;
-            productToEdit.label = newLabel;
-            productToEdit.quantity = quantity;
-            productToEdit.timestamp = new Date().toLocaleString('fr-FR'); // Update timestamp on edit
-            
-            scannedProducts.unshift(productToEdit); // Add updated product to front
-
-            saveState('scannedProducts', scannedProducts); // Save scanned products
-
-            const productElement = document.querySelector(`[data-product-id="${id}"]`);
-            if (productElement) {
-                updateProductItemElement(productElement, productToEdit); // Update content
-                recentScansDiv.prepend(productElement); // Move to top
-            }
-            
-            updateScanCount();
+            store.updateScannedProductDetails(id, {
+                barcode: newBarcode,
+                code: newCode,
+                label: newLabel,
+                quantity: quantity
+            });
             showNotification('Produit modifié avec succès.', 'success');
         } else {
             showNotification('La quantité doit être un nombre valide et supérieur ou égal à 1.', 'error');
@@ -646,6 +524,10 @@ window.editProduct = function(id) {
 };
 
 function exportResults() {
+    const state = store.getState();
+    const scannedProducts = state.scannedProducts;
+    const config = state.config;
+
     if (scannedProducts.length === 0) {
         showNotification('Aucun produit à exporter.', 'warning');
         return;
@@ -682,10 +564,10 @@ function exportResults() {
         p.label,
         p.quantity,
         p.timestamp,
-        currentDepot, // Use current DOM value
-        currentZone,  // Use current DOM value
-        currentDate,  // Use current DOM value
-        currentInventoriedBy // Use current DOM value
+        currentDepot,
+        currentZone,
+        currentDate,
+        currentInventoriedBy
     ]);
 
     const ws = XLSX.utils.aoa_to_sheet([
@@ -697,7 +579,6 @@ function exportResults() {
 
     const fileName = `Inventaire_${currentDepot}_${currentZone}_${currentDate}_${currentInventoriedBy}.xlsx`;
     
-    // --- MODIFICATION ICI : Utilisation de Blob pour le téléchargement ---
     const wbout = XLSX.write(wb, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([wbout], { type: 'application/octet-stream' });
 
@@ -705,46 +586,35 @@ function exportResults() {
     const a = document.createElement('a');
     a.href = url;
     a.download = fileName;
-    document.body.appendChild(a); // Nécessaire pour Firefox
+    document.body.appendChild(a);
     a.click();
-    document.body.removeChild(a); // Nettoyage
-    URL.revokeObjectURL(url); // Libérer l'URL de l'objet
-    // --- FIN DE LA MODIFICATION ---
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
     // Vider les résultats après l'exportation réussie
-    scannedProducts = [];
-    clearState('scannedProducts'); // Efface les produits scannés du stockage
-    // Clear recent scans DOM
-    recentScansDiv.innerHTML = '';
-    toggleEmptyRecentScansPlaceholder(); // Show placeholder
-    updateScanCount(); // Met à jour le compteur de scans et le tableau des résultats
-
+    store.clearScannedProducts();
     showNotification('Exportation Excel réussie et liste des résultats vidée !', 'success');
 }
 
 function clearResults() {
     if (confirm('Êtes-vous sûr de vouloir vider tous les résultats scannés ?')) {
-        scannedProducts = [];
-        clearState('scannedProducts'); // Clear scanned products from storage
-        // Clear recent scans DOM
-        recentScansDiv.innerHTML = '';
-        toggleEmptyRecentScansPlaceholder(); // Show placeholder
-        updateScanCount();
+        store.clearScannedProducts();
         showNotification('Tous les résultats ont été vidés.', 'success');
     }
 }
 
 function updateExportFileName() {
+    const state = store.getState();
     const depot = depotSelect.value || 'depot';
     const zone = zoneInput.value || 'zone';
     const date = dateInput.value || 'date';
-    const inventoriedBy = inventoriedBySelect.value || 'inventorieur'; // Récupère la valeur du nouveau champ
-    exportFileNameSpan.textContent = `${depot}_${zone}_${date}_${inventoriedBy}`; // Inclut la personne qui inventorie
+    const inventoriedBy = inventoriedBySelect.value || 'inventorieur';
+    exportFileNameSpan.textContent = `${depot}_${zone}_${date}_${inventoriedBy}`;
 }
 
 // --- Scan Feedback (Visual & Sound) ---
-const successSound = new Audio('https://www.soundjay.com/button/button-09.mp3'); // Nouveau son de succès (bip)
-const errorSound = new Audio('https://www.soundjay.com/misc/fail-buzzer-01.mp3'); // Example sound
+const successSound = new Audio('https://www.soundjay.com/button/button-09.mp3');
+const errorSound = new Audio('https://www.soundjay.com/misc/fail-buzzer-01.mp3');
 
 function triggerScanFeedback(type) {
     if (type === 'success') {
