@@ -40,7 +40,7 @@ const scanResultDiv = document.getElementById('scanResult');
 const manualAddDiv = document.getElementById('manualAdd');
 const manualBarcodeInput = document.getElementById('manualBarcode');
 const manualCodeInput = document.getElementById('manualCode');
-const manualLabelInput = document="manualLabelInput";
+const manualLabelInput = document.getElementById("manualLabelInput"); // Correction ici
 const addManualProductBtn = document.getElementById('addManualProduct');
 const cancelManualBtn = document.getElementById('cancelManual');
 const recentScansDiv = document.getElementById('recentScans');
@@ -168,55 +168,71 @@ function validateConfiguration() {
 }
 
 function handleExcelImport(event) {
+    console.log('handleExcelImport: Fonction d\'importation Excel déclenchée.');
     const file = event.target.files[0];
     importStatusDiv.classList.remove('hidden', 'bg-green-100', 'bg-red-100', 'text-green-800', 'text-red-800');
     importStatusDiv.innerHTML = '';
     productDatabase = []; // Clear previous database on new import attempt
 
     if (!file) {
+        console.log('handleExcelImport: Aucun fichier sélectionné.');
         importStatusDiv.classList.add('hidden');
         return;
     }
 
+    console.log('handleExcelImport: Fichier sélectionné:', file.name, file.type, file.size, 'bytes');
+
     const reader = new FileReader();
+
     reader.onload = function(e) {
+        console.log('FileReader.onload: Lecture du fichier terminée avec succès.');
         try {
             const data = new Uint8Array(e.target.result);
+            console.log('XLSX.read: Tentative de lecture du classeur Excel.');
             const workbook = XLSX.read(data, { type: 'array' });
+            console.log('XLSX.read: Classeur lu.', workbook);
 
             if (!workbook || !workbook.SheetNames || workbook.SheetNames.length === 0) {
                 displayImportError('Fichier Excel vide ou format incorrect.');
+                console.error('handleExcelImport: Erreur - Fichier Excel vide ou format incorrect.');
                 return;
             }
 
             const firstSheetName = workbook.SheetNames[0];
             const worksheet = workbook.Sheets[firstSheetName];
+            console.log('XLSX.utils.sheet_to_json: Tentative de conversion de la feuille en JSON.');
 
             if (!worksheet) {
                 displayImportError('La première feuille du fichier Excel est vide.');
+                console.error('handleExcelImport: Erreur - La première feuille du fichier Excel est vide.');
                 return;
             }
 
             const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            console.log('XLSX.utils.sheet_to_json: Feuille convertie en JSON.', json);
 
             if (!json || json.length === 0) {
                 displayImportError('Le fichier Excel ne contient pas de données.');
+                console.error('handleExcelImport: Erreur - Le fichier Excel ne contient pas de données.');
                 return;
             }
 
             // Ensure the first row (header) exists and is an array
             if (!Array.isArray(json[0])) {
                 displayImportError('La première ligne du fichier Excel n\'est pas un format de tableau valide.');
+                console.error('handleExcelImport: Erreur - La première ligne du fichier Excel n\'est pas un format de tableau valide.');
                 return;
             }
 
             const headerRow = json[0];
             if (headerRow[0] !== 'CodeBarres' || headerRow[1] !== 'CodeArticle' || headerRow[2] !== 'Libelle') {
                 displayImportError('Format de fichier Excel incorrect. Attendu: CodeBarres | CodeArticle | Libelle.');
+                console.error('handleExcelImport: Erreur - Format de fichier Excel incorrect. Attendu: CodeBarres | CodeArticle | Libelle.');
                 return;
             }
 
             // Process data rows
+            console.log('handleExcelImport: Traitement des lignes de données.');
             const importedData = json.slice(1).map(row => {
                 if (!Array.isArray(row) || row.length < 3) {
                     console.warn("Skipping malformed row in Excel import:", row);
@@ -231,16 +247,26 @@ function handleExcelImport(event) {
 
             if (importedData.length === 0) {
                 displayImportError('Aucune donnée d\'article valide trouvée après l\'importation.');
+                console.error('handleExcelImport: Erreur - Aucune donnée d\'article valide trouvée après l\'importation.');
                 return;
             }
 
             productDatabase = importedData;
             displayImportSuccess(`${productDatabase.length} articles importés avec succès.`);
+            console.log('handleExcelImport: Importation réussie. Nombre d\'articles:', productDatabase.length);
 
         } catch (error) {
             displayImportError(`Erreur lors de l\'importation du fichier: ${error.message}`);
+            console.error('handleExcelImport: Erreur inattendue lors du traitement du fichier:', error);
         }
     };
+
+    reader.onerror = function(error) {
+        displayImportError(`Erreur de lecture du fichier: ${error.message}`);
+        console.error('FileReader.onerror: Erreur lors de la lecture du fichier:', error);
+    };
+
+    console.log('FileReader.readAsArrayBuffer: Démarrage de la lecture du fichier.');
     reader.readAsArrayBuffer(file);
 }
 
