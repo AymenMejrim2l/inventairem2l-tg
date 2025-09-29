@@ -1,15 +1,18 @@
-const CACHE_NAME = 'm2ltg-inventory-cache-v4'; // Version du cache incrémentée
+const CACHE_NAME = 'm2ltg-inventory-cache-v5'; // Version du cache incrémentée
 const urlsToCache = [
   './',
   './index.html',
   './js/app.js',
   './js/storage.js',
+  './js/store.js', // Ajouté pour le cache
+  './js/ui/notifications.js', // Ajouté pour le cache
+  './js/ui/feedback.js', // Ajouté pour le cache
+  './audio/success.mp3', // Nouveau son de succès local
+  './audio/error.mp3',   // Nouveau son d'erreur local
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
   'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  'https://www.soundjay.com/button/button-09.mp3', // Nouveau son de succès (bip)
-  'https://www.soundjay.com/misc/fail-buzzer-01.mp3' // Son d'erreur
-  // Ajoutez ici d'autres ressources que vous souhaitez mettre en cache
+  // Les anciens chemins de sons externes ont été supprimés
 ];
 
 self.addEventListener('install', (event) => {
