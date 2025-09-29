@@ -1,6 +1,6 @@
 // js/ui/feedback.js
 
-const errorSound = new Audio('../audio/error.mp3'); // Chemin vers votre fichier audio d'erreur
+const errorSound = new Audio('../../audio/error.mp3'); // Chemin corrigé vers votre fichier audio d'erreur
 
 // Précharger les sons pour s'assurer qu'ils sont prêts
 errorSound.load();
