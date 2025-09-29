@@ -1,4 +1,4 @@
-const CACHE_NAME = 'm2ltg-inventory-cache-v10'; // Version du cache incrémentée pour forcer la mise à jour
+const CACHE_NAME = 'm2ltg-inventory-cache-v11'; // Version du cache incrémentée pour forcer la mise à jour
 const urlsToCache = [
   './',
   './index.html',
