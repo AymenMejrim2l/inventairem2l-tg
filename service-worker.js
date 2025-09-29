@@ -1,4 +1,4 @@
-const CACHE_NAME = 'm2ltg-inventory-cache-v6'; // Version du cache incrémentée pour forcer la mise à jour
+const CACHE_NAME = 'm2ltg-inventory-cache-v7'; // Version du cache incrémentée pour forcer la mise à jour
 const urlsToCache = [
   './',
   './index.html',
@@ -9,8 +9,6 @@ const urlsToCache = [
   './js/ui/feedback.js',
   './audio/success.mp3', // Chemin local
   './audio/error.mp3',   // Chemin local
-  './icons/icon-192x192.png', // Chemin local pour l'icône
-  './icons/icon-512x512.png', // Chemin local pour l'icône
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
   'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
