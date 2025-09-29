@@ -1,18 +1,19 @@
-const CACHE_NAME = 'm2ltg-inventory-cache-v5'; // Version du cache incrémentée
+const CACHE_NAME = 'm2ltg-inventory-cache-v6'; // Version du cache incrémentée pour forcer la mise à jour
 const urlsToCache = [
   './',
   './index.html',
   './js/app.js',
   './js/storage.js',
-  './js/store.js', // Ajouté pour le cache
-  './js/ui/notifications.js', // Ajouté pour le cache
-  './js/ui/feedback.js', // Ajouté pour le cache
-  './audio/success.mp3', // Nouveau son de succès local
-  './audio/error.mp3',   // Nouveau son d'erreur local
+  './js/store.js',
+  './js/ui/notifications.js',
+  './js/ui/feedback.js',
+  './audio/success.mp3', // Chemin local
+  './audio/error.mp3',   // Chemin local
+  './icons/icon-192x192.png', // Chemin local pour l'icône
+  './icons/icon-512x512.png', // Chemin local pour l'icône
   'https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css',
   'https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css',
   'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
-  // Les anciens chemins de sons externes ont été supprimés
 ];
 
 self.addEventListener('install', (event) => {
