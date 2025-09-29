@@ -17,14 +17,14 @@ export function triggerScanFeedback(type) {
 
     if (type === 'success') {
         mobileContainer.classList.add('scan-success');
-        console.log("Tentative de jouer le son de succès.");
+        console.log("Tentative de jouer le son de succès (local).");
         successSound.currentTime = 0;
-        successSound.play().catch(e => console.error("Erreur lors de la lecture du son de succès:", e));
+        successSound.play().catch(e => console.error("Erreur lors de la lecture du son de succès (local):", e));
     } else if (type === 'error') {
         mobileContainer.classList.add('scan-error');
-        console.log("Tentative de jouer le son d'erreur.");
+        console.log("Tentative de jouer le son d'erreur (local).");
         errorSound.currentTime = 0;
-        errorSound.play().catch(e => console.error("Erreur lors de la lecture du son d'erreur:", e));
+        errorSound.play().catch(e => console.error("Erreur lors de la lecture du son d'erreur (local):", e));
     }
 
     setTimeout(() => {
