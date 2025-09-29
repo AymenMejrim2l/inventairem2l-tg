@@ -1,6 +1,18 @@
 // js/ui/feedback.js
 
-const errorSound = new Audio('../../audio/error.mp3'); // Chemin corrigé vers votre fichier audio d'erreur
+// Dynamiquement déterminer le chemin de base de l'application
+const getAppBasePath = () => {
+    const pathParts = window.location.pathname.split('/');
+    // Si le dernier segment est un nom de fichier (ex: index.html), on remonte d'un niveau
+    if (pathParts.length > 1 && pathParts[pathParts.length - 1].includes('.')) {
+        return pathParts.slice(0, -1).join('/') + '/';
+    }
+    // Sinon, c'est déjà un chemin de répertoire
+    return window.location.pathname.endsWith('/') ? window.location.pathname : window.location.pathname + '/';
+};
+
+const appBasePath = getAppBasePath();
+const errorSound = new Audio(`${appBasePath}audio/error.mp3`);
 
 // Précharger les sons pour s'assurer qu'ils sont prêts
 errorSound.load();
